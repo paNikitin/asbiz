@@ -52,12 +52,21 @@ class Candidate:
     system: str
     body: Dict[str, Any] = field(default_factory=dict)  # добавка к запросу
     max_tokens: int = 16
+    examples: List[tuple] = field(default_factory=list)
 
 
 CANDIDATES = [
     Candidate("короткая постановка", SHORT),
     Candidate("постановка с правилами", DETAILED),
     Candidate("правила + рассуждение", DETAILED, body=THINKING, max_tokens=2048),
+    Candidate(
+    "правила + два примера",
+    DETAILED,
+    examples=[
+        ("Не пришла пенсия мертвой бабки", "платежи"),
+        ("Верните мне проданную квартиру", "возвраты"),
+    ],
+),
 ]
 
 
@@ -75,11 +84,12 @@ class Row:
 
 
 def prompt(cand: Candidate, row: Dict[str, Any]) -> List[Dict[str, str]]:
-    """Постановка кандидата и текст обращения"""
-    return [
-        {"role": "system", "content": cand.system},
-        {"role": "user", "content": row["text"]},
-    ]
+    msgs = [{"role": "system", "content": cand.system}]
+    for text, cat in cand.examples:
+        msgs.append({"role": "user", "content": text})
+        msgs.append({"role": "assistant", "content": cat})
+    msgs.append({"role": "user", "content": row["text"]})
+    return msgs
 
 
 def parse_category(text: str) -> Optional[str]:
